@@ -1,0 +1,189 @@
+# CLAUDE.MD — AsteroidGame Project Context
+
+> **For AI agents:** Read this file at the start of every session.
+> Update it whenever the architecture, conventions, or game design changes.
+> Do NOT speculate — only record decisions that have been made and implemented.
+
+---
+
+## Project Overview
+
+**Game:** 2D top-down space mining game built in Godot 4 (GDScript).
+**Working title:** AsteroidGame (rename TBD).
+**Engine version:** Godot 4.5, Forward Plus renderer.
+**Platform target:** PC (Windows primary, Linux/Mac secondary).
+
+### Core Game Loop
+1. Player pilots a spaceship through a procedurally scattered asteroid field.
+2. Player mines asteroids to collect resources.
+3. Resources are spent at a shop/station to buy upgrades.
+4. Enemy ships spawn and escalate over time, attacking the player.
+5. Player survives, mines, upgrades — repeat.
+
+---
+
+## Repository Structure
+
+```
+asteroid-game/          ← Godot project root (all Godot files live here)
+├── CLAUDE.MD           ← This file
+├── PROJECTSTATUS.MD    ← Live task/status tracker for agents
+├── project.godot
+├── icon.svg
+├── scenes/             ← All .tscn scene files (to be created)
+│   ├── main/           ← Main game scene, game loop
+│   ├── player/         ← Player ship scene
+│   ├── enemies/        ← Enemy ship scenes
+│   ├── asteroids/      ← Asteroid scenes (small/medium/large)
+│   ├── ui/             ← HUD, menus, shop
+│   └── world/          ← World/level scenes
+├── scripts/            ← All .gd GDScript files (to be created)
+│   ├── player/
+│   ├── enemies/
+│   ├── asteroids/
+│   ├── ui/
+│   ├── systems/        ← Game-wide systems (resource manager, wave manager, etc.)
+│   └── utils/          ← Shared helper scripts/autoloads
+├── assets/             ← Art, audio, fonts (to be created)
+│   ├── sprites/
+│   ├── audio/
+│   └── fonts/
+└── .godot/             ← Godot cache (git-ignored)
+```
+
+---
+
+## Architecture Decisions
+
+### Autoloads (Singletons)
+Global systems are registered as Autoloads in `project.godot` so any script can access them.
+
+| Autoload name    | Script path                          | Purpose                              |
+|------------------|--------------------------------------|--------------------------------------|
+| `ResourceManager`| `scripts/systems/resource_manager.gd`| Tracks player's resource inventory   |
+| `GameState`      | `scripts/systems/game_state.gd`      | Game phase, score, session data      |
+| `WaveManager`    | `scripts/systems/wave_manager.gd`    | Spawns and escalates enemy waves     |
+| `EventBus`       | `scripts/systems/event_bus.gd`       | Decoupled signal hub (pub/sub)       |
+
+> **Status:** Planned — not yet implemented.
+
+### Signal Architecture
+Prefer signals over direct node references to keep scenes loosely coupled.
+Use `EventBus` (a plain Node autoload) for cross-scene communication.
+Direct node signals are fine within a single scene.
+
+### Scene Instancing
+Enemies, asteroids, and projectiles are instanced from `.tscn` files at runtime.
+Keep scene files lean — logic lives in attached scripts.
+
+---
+
+## Game Systems (Planned)
+
+### Player Ship
+- Node type: `CharacterBody2D`
+- Movement: Physics-based thrust with rotation (tank controls or mouse-aim TBD).
+- Health: Hit points, shield layer (upgradeable).
+- Mining: Laser/beam weapon that damages asteroids and collects drops.
+- Combat: Separate weapon slot for enemy combat.
+
+### Asteroids
+- Three sizes: Large → Medium → Small (split on destruction).
+- Each size yields different resource amounts.
+- Resource types: Metal, Crystal, Fuel (names subject to change).
+- Large asteroids have more HP and take more hits to break.
+
+### Resources
+| Resource | Source          | Use                              |
+|----------|-----------------|----------------------------------|
+| Metal    | All asteroids   | Hull upgrades, weapons           |
+| Crystal  | Medium/Large    | Shield upgrades, special weapons |
+| Fuel     | Small/Large     | Engine upgrades, dash ability    |
+
+### Enemies
+| Type       | Behaviour                                      | Difficulty |
+|------------|------------------------------------------------|------------|
+| Scout      | Fast, low HP, ram/ram-shoot hybrid             | Easy       |
+| Fighter    | Balanced, shoots projectiles, strafes          | Medium     |
+| Hauler     | Slow, high HP, tries to steal asteroid drops   | Medium     |
+| Boss       | Periodic, multi-phase, unique attack patterns  | Hard       |
+
+### Upgrades / Shop
+- Shop appears at a Space Station node (present in the world or accessed via menu).
+- Upgrades are tiered (1–3 per category).
+- Categories: Engine, Hull, Shield, Mining Laser, Combat Weapon, Cargo Hold.
+
+### Wave System
+- Waves increase in enemy count and type mix over time/score.
+- Downtime between waves gives player mining windows.
+
+---
+
+## Coding Conventions
+
+### GDScript Style
+- Use `class_name` at the top of every script that will be referenced elsewhere.
+- Snake_case for variables and functions: `player_speed`, `take_damage()`.
+- PascalCase for class names and node names: `PlayerShip`, `AsteroidLarge`.
+- Constants in SCREAMING_SNAKE_CASE: `MAX_HEALTH`, `BASE_SPEED`.
+- Exported variables (`@export`) go at the top of the script, grouped and commented.
+- Prefix private/internal functions with `_`: `_on_body_entered()`, `_calculate_thrust()`.
+
+### Comments
+- Every script starts with a brief docblock explaining what it does.
+- Public functions have a one-line comment describing their purpose.
+- Non-obvious logic has inline comments.
+- Agents: leave `# TODO(agentname):` comments for unfinished work.
+
+### File Naming
+- Scene files: `snake_case.tscn` — e.g., `player_ship.tscn`, `asteroid_large.tscn`.
+- Script files: `snake_case.gd` — match the scene they attach to where possible.
+- Asset files: `snake_case` with type suffix — e.g., `player_ship_sprite.png`.
+
+### Node Naming (inside scenes)
+- Nodes use PascalCase: `Sprite2D`, `CollisionShape2D`, `AnimationPlayer`.
+- Group related nodes under clearly named parent nodes.
+
+---
+
+## Key Constants & Values (Working Defaults)
+
+These are starting values — balance passes will update them.
+
+```gdscript
+# Player
+BASE_SPEED       = 200.0   # pixels/sec max velocity
+ROTATION_SPEED   = 3.0     # radians/sec
+MAX_HEALTH       = 100
+MAX_SHIELD       = 50
+
+# Asteroids
+LARGE_HP         = 30
+MEDIUM_HP        = 15
+SMALL_HP         = 5
+
+# Resources per asteroid (base drops)
+LARGE_METAL      = 15
+MEDIUM_METAL     = 7
+SMALL_METAL      = 3
+```
+
+---
+
+## Agent Instructions
+
+1. **Always read `CLAUDE.MD` and `PROJECTSTATUS.MD` before starting work.**
+2. **Update `PROJECTSTATUS.MD`** when you begin a task, complete it, or discover blockers.
+3. **Do not change architecture decisions** without noting the change in both files.
+4. **Keep scripts self-contained and commented** — another agent will extend your work.
+5. **Prefer signals over direct calls** for cross-node communication.
+6. **Test scenes work in isolation** before wiring them into the main scene.
+7. Leave `# TODO(agent):` markers for anything left intentionally incomplete.
+
+---
+
+## Session Log
+
+| Date       | Agent / Human | Summary                                              |
+|------------|---------------|------------------------------------------------------|
+| 2026-03-05 | Human + Claude| Project initialised. CLAUDE.MD + PROJECTSTATUS.MD created. Git repo set up. |
