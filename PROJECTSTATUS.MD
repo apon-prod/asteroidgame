@@ -106,9 +106,9 @@ Tasks are roughly in implementation order. Re-order as dependencies become clear
 
 | # | Issue                                        | Raised by | Status  |
 |---|----------------------------------------------|-----------|---------|
-| 1 | Player movement style: tank controls vs mouse-aim? | Human | Open — decide before Phase 1 |
-| 2 | Art direction: programmer art placeholders or asset pack? | Human | Open — decide before Phase 2 |
-| 3 | World structure: infinite scrolling, large fixed map, or room-based? | Human | Open — decide before Phase 2 |
+| 1 | Player movement style: tank controls vs mouse-aim? | Human | **Resolved** — WASD moves, mouse aims. Controller: twin-stick (left = move, right = aim). |
+| 2 | Art direction: programmer art placeholders or asset pack? | Human | **Resolved** — Placeholder art for now; real assets added as available. |
+| 3 | World structure: infinite scrolling, large fixed map, or room-based? | Human | **Resolved** — Infinite scrolling with parallax background layers. |
 
 ---
 

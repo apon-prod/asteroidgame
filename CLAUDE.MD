@@ -72,6 +72,11 @@ Prefer signals over direct node references to keep scenes loosely coupled.
 Use `EventBus` (a plain Node autoload) for cross-scene communication.
 Direct node signals are fine within a single scene.
 
+### World Structure
+- **Infinite scrolling** world — no hard boundaries.
+- Background uses **parallax layers** (multiple depths of star/nebula sprites) to convey depth.
+- Asteroids and enemies spawn dynamically around the player as they travel.
+
 ### Scene Instancing
 Enemies, asteroids, and projectiles are instanced from `.tscn` files at runtime.
 Keep scene files lean — logic lives in attached scripts.
@@ -82,7 +87,7 @@ Keep scene files lean — logic lives in attached scripts.
 
 ### Player Ship
 - Node type: `CharacterBody2D`
-- Movement: Physics-based thrust with rotation (tank controls or mouse-aim TBD).
+- Movement: **WASD** for directional thrust, **mouse** for aiming. Controller: left stick for movement, right stick for aiming (twin-stick layout).
 - Health: Hit points, shield layer (upgradeable).
 - Mining: Laser/beam weapon that damages asteroids and collects drops.
 - Combat: Separate weapon slot for enemy combat.
@@ -186,4 +191,5 @@ SMALL_METAL      = 3
 
 | Date       | Agent / Human | Summary                                              |
 |------------|---------------|------------------------------------------------------|
-| 2026-03-05 | Human + Claude| Project initialised. CLAUDE.MD + PROJECTSTATUS.MD created. Git repo set up. |
+| 2026-03-05 | Human + Claude| Project initialised. CLAUDE.MD + PROJECTSTATUS.MD created. Git repo set up. Pushed to github.com/apon-prod/asteroidgame. |
+| 2026-03-05 | Human        | Decisions locked: WASD+mouse controls, twin-stick controller, placeholder art, infinite scrolling with parallax. |
