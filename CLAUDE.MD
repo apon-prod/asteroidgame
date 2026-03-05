@@ -25,31 +25,62 @@
 ## Repository Structure
 
 ```
-asteroid-game/          ← Godot project root (all Godot files live here)
-├── CLAUDE.MD           ← This file
-├── PROJECTSTATUS.MD    ← Live task/status tracker for agents
+asteroid-game/                  ← Godot project root
+├── CLAUDE.MD                   ← This file (agent context)
+├── PROJECTSTATUS.MD            ← Live task tracker
 ├── project.godot
 ├── icon.svg
-├── scenes/             ← All .tscn scene files (to be created)
-│   ├── main/           ← Main game scene, game loop
-│   ├── player/         ← Player ship scene
-│   ├── enemies/        ← Enemy ship scenes
-│   ├── asteroids/      ← Asteroid scenes (small/medium/large)
-│   ├── ui/             ← HUD, menus, shop
-│   └── world/          ← World/level scenes
-├── scripts/            ← All .gd GDScript files (to be created)
+│
+├── scenes/                     ← .tscn scene files only
+│   ├── main/                   ← Entry point scene + game loop
+│   ├── player/                 ← Player ship scene
+│   ├── enemies/                ← Enemy ship scenes (scout, fighter, …)
+│   ├── asteroids/              ← Asteroid scenes + resource drop scene
+│   ├── ui/
+│   │   ├── hud/                ← In-game HUD (health, shields, resources)
+│   │   ├── menus/              ← Main menu, pause, game-over screens
+│   │   └── shop/               ← Upgrade shop UI
+│   ├── world/                  ← World container, space station
+│   └── effects/                ← Particles, explosions, mining beam VFX
+│
+├── scripts/                    ← .gd GDScript files (mirrors scenes where possible)
 │   ├── player/
 │   ├── enemies/
 │   ├── asteroids/
 │   ├── ui/
-│   ├── systems/        ← Game-wide systems (resource manager, wave manager, etc.)
-│   └── utils/          ← Shared helper scripts/autoloads
-├── assets/             ← Art, audio, fonts (to be created)
+│   ├── world/
+│   ├── effects/
+│   ├── systems/                ← Autoloads: EventBus, GameState, ResourceManager, WaveManager
+│   └── utils/                  ← Shared constants, helper functions
+│
+├── resources/                  ← .tres data files (no logic — config/data only)
+│   ├── upgrades/               ← UpgradeData resources (one .tres per upgrade tier)
+│   ├── enemies/                ← EnemyData resources (stats per enemy type)
+│   └── items/                  ← ResourceDrop definitions
+│
+├── assets/                     ← Art and audio (never scripts)
 │   ├── sprites/
+│   │   ├── player/
+│   │   ├── enemies/
+│   │   ├── asteroids/
+│   │   ├── ui/
+│   │   └── environment/        ← Parallax layers, starfields, nebulae
 │   ├── audio/
-│   └── fonts/
-└── .godot/             ← Godot cache (git-ignored)
+│   │   ├── music/
+│   │   └── sfx/
+│   ├── fonts/
+│   └── shaders/                ← .gdshader files (screen effects, glow, etc.)
+│
+├── addons/                     ← Godot plugins (none yet)
+└── .godot/                     ← Godot cache (git-ignored)
 ```
+
+### Folder Rules
+- **`scenes/`** — `.tscn` files only. Never put scripts here.
+- **`scripts/`** — `.gd` files only. Mirrors `scenes/` structure where the script belongs to a scene.
+- **`resources/`** — `.tres` data files. No logic — data/config only. Reference scripts via `ExtResource`.
+- **`assets/`** — Art and audio. Never scripts or scene files.
+- **`addons/`** — Godot plugins installed via AssetLib or manually.
 
 ---
 
