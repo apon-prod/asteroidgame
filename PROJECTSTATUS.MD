@@ -12,7 +12,9 @@
 
 | Agent / Session | Task                        | Status      | Notes                        |
 |-----------------|-----------------------------|-------------|------------------------------|
-| *(none)*        | *(none active)*             | Idle        |                              |
+| **ARIA**        | Phase 0 — Foundation        | Ready       | Autoloads, Main scene, project.godot |
+| **Pilot**       | Phase 1 — Player Ship       | Ready       | PlayerShip scene + all components |
+| **Navigator**   | Phase 2+3 — World & Asteroids | Ready    | Mothership, asteroids, resource drops |
 
 ---
 
@@ -20,60 +22,56 @@
 
 Tasks are in implementation order. Dependencies are noted. Each phase should be fully testable before moving to the next.
 
-### Phase 0 — Foundation
-- [ ] Create `EventBus` autoload (`scripts/systems/event_bus.gd`) — all signals from CLAUDE.MD signal contracts
-- [ ] Create `GameState` autoload (`scripts/systems/game_state.gd`) — FSM with states: MAIN_MENU, MOTHERSHIP_DOCKED, RUN_ACTIVE, PLAYER_DIED, BANKED, FINAL_BOSS, EPILOGUE
-- [ ] Create `SaveManager` autoload (`scripts/systems/save_manager.gd`) — save/load to `user://savegame.json`
-- [ ] Create `ResourceManager` autoload (`scripts/systems/resource_manager.gd`) — carried + banked pools, resource type definitions
-- [ ] Create `UpgradeManager` autoload (`scripts/systems/upgrade_manager.gd`) — dual tree definitions, unlock checks, purchase logic
-- [ ] Create `RunManager` autoload (`scripts/systems/run_manager.gd`) — run start/end/death/bank lifecycle, threat calculation
-- [ ] Register all 6 autoloads in `project.godot`
-- [ ] Create placeholder `Main` scene (`scenes/main/main.tscn`) with basic node structure from CLAUDE.MD scene architecture
-- [ ] Set `Main` as the project's main scene in `project.godot`
-- [ ] Wire input map in `project.godot`: move_up, move_down, move_left, move_right, fire_mining, fire_weapon, interact/dock
+### Phase 0 — Foundation `[ARIA]`
+- [ ] `[ARIA]` Create `EventBus` autoload (`scripts/systems/event_bus.gd`) — all signals from CLAUDE.MD signal contracts
+- [ ] `[ARIA]` Create `GameState` autoload (`scripts/systems/game_state.gd`) — FSM with states: MAIN_MENU, MOTHERSHIP_DOCKED, RUN_ACTIVE, PLAYER_DIED, BANKED, FINAL_BOSS, EPILOGUE
+- [ ] `[ARIA]` Create `SaveManager` autoload (`scripts/systems/save_manager.gd`) — save/load to `user://savegame.json`
+- [ ] `[ARIA]` Create `ResourceManager` autoload (`scripts/systems/resource_manager.gd`) — carried + banked pools, resource type definitions
+- [ ] `[ARIA]` Create `UpgradeManager` autoload (`scripts/systems/upgrade_manager.gd`) — dual tree definitions, unlock checks, purchase logic
+- [ ] `[ARIA]` Create `RunManager` autoload (`scripts/systems/run_manager.gd`) — run start/end/death/bank lifecycle, threat calculation
+- [ ] `[ARIA]` Create `Constants` (`scripts/utils/constants.gd`) — all shared constants from CLAUDE.MD
+- [ ] `[ARIA]` Register all 6 autoloads in `project.godot`
+- [ ] `[ARIA]` Create placeholder `Main` scene (`scenes/main/main.tscn`) with basic node structure from CLAUDE.MD scene architecture
+- [ ] `[ARIA]` Set `Main` as the project's main scene in `project.godot`
+- [ ] `[ARIA]` Wire input map in `project.godot`: move_up, move_down, move_left, move_right, fire_mining, fire_weapon, interact/dock
 
-### Phase 1 — Player Ship
-- [ ] Create player ship placeholder sprite (coloured polygon)
-- [ ] Create `PlayerShip` scene (`scenes/player/player_ship.tscn`) as CharacterBody2D
-- [ ] Write `player_ship.gd` — WASD thrust + mouse aim, physics-based with drag, drift
-- [ ] Create `HealthComponent` (`scripts/player/health_component.gd`) — HP + shield, damage, death signal
-- [ ] Create `EnergyComponent` (`scripts/player/energy_component.gd`) — energy pool, drain, regen
-- [ ] Create `CargoComponent` (`scripts/player/cargo_component.gd`) — carried resources, weight, speed penalty
-- [ ] Attach `Camera2D` with smooth follow (position smoothing enabled)
-- [ ] Add thruster particles (CPUParticles2D) that scale with thrust
-- [ ] Add PlayerShip to Main scene and verify: movement feels spacey, drifts, rotates to mouse
-- [ ] Verify cargo slowdown: add debug weight and confirm speed reduction
+### Phase 1 — Player Ship `[Pilot]`
+- [ ] `[Pilot]` Create player ship placeholder sprite (coloured polygon)
+- [ ] `[Pilot]` Create `PlayerShip` scene (`scenes/player/player_ship.tscn`) as CharacterBody2D
+- [ ] `[Pilot]` Write `player_ship.gd` — WASD thrust + mouse aim, physics-based with drag, drift
+- [ ] `[Pilot]` Create `HealthComponent` (`scripts/player/health_component.gd`) — HP + shield, damage, death signal
+- [ ] `[Pilot]` Create `EnergyComponent` (`scripts/player/energy_component.gd`) — energy pool, drain, regen
+- [ ] `[Pilot]` Create `CargoComponent` (`scripts/player/cargo_component.gd`) — carried resources, weight, speed penalty
+- [ ] `[Pilot]` Create `MiningBeam` (`scripts/player/mining_beam.gd`) — Line2D + RayCast2D, continuous DPS, energy drain
+- [ ] `[Pilot]` Create `WeaponMount` (`scripts/player/weapon_mount.gd`) — projectile spawn point, aims at mouse
+- [ ] `[Pilot]` Attach `Camera2D` with smooth follow (position smoothing enabled)
+- [ ] `[Pilot]` Add thruster particles (CPUParticles2D) that scale with thrust
 
-### Phase 2 — Mothership
-- [ ] Create `Mothership` scene (`scenes/world/mothership.tscn`) — StaticBody2D with placeholder sprite
-- [ ] Add dock zone (Area2D trigger) — detects when PlayerShip enters
-- [ ] On dock: emit `EventBus.player_docked`, transition GameState to MOTHERSHIP_DOCKED
-- [ ] On launch: emit `EventBus.player_launched`, transition to RUN_ACTIVE
-- [ ] Implement safe zone — enemies cannot spawn within mothership radius
-- [ ] Add visual indicators: emergency beacon at start, lights turn on per research tier (see GAME_DESIGN.MD)
-- [ ] Place Mothership at world origin (0,0) in Main scene
+### Phase 2 — Mothership `[Navigator]`
+- [ ] `[Navigator]` Create `Mothership` scene (`scenes/world/mothership.tscn`) — StaticBody2D with placeholder sprite
+- [ ] `[Navigator]` Add dock zone (Area2D trigger) — detects when PlayerShip enters
+- [ ] `[Navigator]` On dock: emit `EventBus.player_docked`, on exit: emit `EventBus.player_launched`
+- [ ] `[Navigator]` Implement safe zone (Area2D, radius ~500px) — query by WaveManager later
+- [ ] `[Navigator]` Add visual indicators: emergency beacon placeholder for future visual progression
 
-### Phase 3 — Procedural Asteroids
-- [ ] Write `asteroid_generator.gd` (`scripts/asteroids/`) — procedural polygon generation
+### Phase 3 — Procedural Asteroids `[Navigator]`
+- [ ] `[Navigator]` Write `asteroid_generator.gd` (`scripts/asteroids/`) — procedural polygon generation
   - Radial vertex variation algorithm
   - Size bands: Small/Medium/Large with continuous variation
   - Resource composition determines colour tint
-- [ ] Create `Asteroid` scene (`scenes/asteroids/asteroid.tscn`) — RigidBody2D with Polygon2D + CollisionPolygon2D
-- [ ] Asteroid script: HP, take_damage(), split-on-death (Large→Medium→Small→drops)
-- [ ] Uranium asteroids: shatter directly into drops (no split) — rare, high-value
-- [ ] Create `AsteroidField` spawner (`scripts/asteroids/asteroid_field.gd`) — spawns asteroids around player as they travel, despawns distant ones
-- [ ] Test: asteroids look varied, break chain works, resource type/colour visible
+- [ ] `[Navigator]` Create `Asteroid` scene (`scenes/asteroids/asteroid.tscn`) — RigidBody2D with Polygon2D + CollisionPolygon2D
+- [ ] `[Navigator]` Asteroid script: HP, take_damage(), split-on-death (Large→Medium→Small→drops)
+- [ ] `[Navigator]` Uranium asteroids: shatter directly into drops (no split) — rare, high-value
+- [ ] `[Navigator]` Create `AsteroidField` spawner (`scripts/asteroids/asteroid_field.gd`) — spawns asteroids around player, despawns distant ones
+- [ ] `[Navigator]` Create `ResourceDrop` scene (`scenes/asteroids/resource_drop.tscn`) — Area2D, collected on player overlap, emits `EventBus.resource_collected`
 
-### Phase 4 — Mining Beam + Resource Drops + Cargo
-- [ ] Create `MiningBeam` node (Line2D + RayCast2D) attached to PlayerShip
-- [ ] Wire LMB input to activate beam toward mouse cursor
-- [ ] Beam deals continuous DPS to asteroid under raycast hit
-- [ ] Beam drains EnergyComponent while active; stops when energy = 0
-- [ ] Energy recharges when beam is not firing
-- [ ] Create `ResourceDrop` scene (`scenes/asteroids/resource_drop.tscn`) — Area2D with sprite, floats/drifts
-- [ ] ResourceDrop: on player overlap, add to CargoComponent and emit `EventBus.resource_collected`
-- [ ] CargoComponent: track weight, emit `EventBus.cargo_changed`, apply speed penalty to PlayerShip
-- [ ] Test: mine an asteroid → drops appear → collect drops → cargo weight increases → speed decreases
+### Phase 4 — Integration + Verification `[POST-AGENT]`
+- [ ] `[POST]` Instance `player_ship.tscn` into Main scene
+- [ ] `[POST]` Instance `mothership.tscn` into World node in Main scene
+- [ ] `[POST]` Verify AsteroidField is wired into World node
+- [ ] `[POST]` Press F5 — ship moves, asteroids spawn, mining beam fires, resources collect
+- [ ] `[POST]` Verify cargo weight increases and slows the ship
+- [ ] `[POST]` Verify dock zone triggers at mothership
 
 ### Phase 5 — HUD
 - [ ] Create `HUD` scene (`scenes/ui/hud/hud.tscn`) as CanvasLayer
@@ -165,7 +163,7 @@ Tasks are in implementation order. Dependencies are noted. Each phase should be 
 
 ## In Progress
 
-*(Nothing in progress — architecture planning complete, implementation not yet started.)*
+Three agents ready to launch in parallel. See `AGENT_ASSIGNMENTS.MD` for prompts and coordination.
 
 ---
 
@@ -213,3 +211,5 @@ Tasks are in implementation order. Dependencies are noted. Each phase should be 
 - Use `/godot` skill when creating `.tscn` or `.tres` files.
 - Read `CLAUDE.MD` for conventions, scene tree, and system details.
 - Read `GAME_DESIGN.MD` for stats, costs, story, and design rationale.
+- **Parallel agents:** Read `AGENT_ASSIGNMENTS.MD` for file ownership, API contracts, collision layers, and groups.
+- **After all agents finish:** Follow the Post-Agent Integration Checklist in `AGENT_ASSIGNMENTS.MD`.

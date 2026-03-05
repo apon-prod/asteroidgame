@@ -381,17 +381,56 @@ const MAX_THREAT_DISTANCE: float = 3000.0  # px from mothership for max distance
 
 ---
 
+## Multi-Agent Coordination
+
+When multiple agents work in parallel, see `AGENT_ASSIGNMENTS.MD` for full details. Key rules:
+
+### File Ownership (Phases 0–4)
+
+| Path | Owner |
+|------|-------|
+| `scripts/systems/`, `scripts/utils/`, `scenes/main/`, `project.godot` | **ARIA** |
+| `scripts/player/`, `scenes/player/` | **Pilot** |
+| `scripts/world/`, `scripts/asteroids/`, `scenes/world/`, `scenes/asteroids/` | **Navigator** |
+
+**Rule:** Never create, edit, or delete files outside your owned paths. If you need something from another agent's domain, code against the API contracts in `AGENT_ASSIGNMENTS.MD` and trust it will exist at integration time.
+
+### Collision Layers
+
+| Layer | Name | Used by |
+|-------|------|---------|
+| 1 | Player | PlayerShip body |
+| 2 | Enemies | Enemy bodies |
+| 3 | Asteroids | Asteroid bodies |
+| 4 | Projectiles | Player + enemy projectiles |
+| 5 | Pickups | Resource drops |
+| 6 | Zones | Mothership dock/safe zone |
+
+### Groups
+
+| Group | Added by | Purpose |
+|-------|----------|---------|
+| `"player"` | Pilot | Find player: `get_tree().get_first_node_in_group("player")` |
+| `"asteroids"` | Navigator | Find all asteroids |
+| `"resource_drops"` | Navigator | Find all floating drops |
+| `"mothership"` | Navigator | Find mothership node |
+| `"enemies"` | (future) | Find all enemy nodes |
+
+---
+
 ## Agent Instructions
 
 1. **Always read `CLAUDE.MD`, `GAME_DESIGN.MD`, and `PROJECTSTATUS.MD` before starting work.**
-2. **Update `PROJECTSTATUS.MD`** when you begin a task, complete it, or discover blockers.
-3. **Do not change architecture decisions** without noting the change in both `CLAUDE.MD` and `PROJECTSTATUS.MD`.
-4. **Keep scripts self-contained and commented** — another agent will extend your work.
-5. **Prefer signals over direct calls** for cross-node communication. Use `EventBus` for cross-scene.
-6. **Test scenes work in isolation** before wiring them into the Main scene.
-7. Leave `# TODO(agent):` markers for anything left intentionally incomplete.
-8. **Use `/godot` skill** when working on `.tscn` or `.tres` files for format guidance.
-9. **Type hints on all function signatures** — no untyped public APIs.
+2. **If running in parallel, also read `AGENT_ASSIGNMENTS.MD`** for file ownership and API contracts.
+3. **Update `PROJECTSTATUS.MD`** when you begin a task, complete it, or discover blockers.
+4. **Do not change architecture decisions** without noting the change in both `CLAUDE.MD` and `PROJECTSTATUS.MD`.
+5. **Keep scripts self-contained and commented** — another agent will extend your work.
+6. **Prefer signals over direct calls** for cross-node communication. Use `EventBus` for cross-scene.
+7. **Test scenes work in isolation** before wiring them into the Main scene.
+8. Leave `# TODO(agent):` markers for anything left intentionally incomplete.
+9. **Use `/godot` skill** when working on `.tscn` or `.tres` files for format guidance.
+10. **Type hints on all function signatures** — no untyped public APIs.
+11. **Never touch files outside your owned paths** during parallel runs.
 
 ---
 
@@ -402,3 +441,4 @@ const MAX_THREAT_DISTANCE: float = 3000.0  # px from mothership for max distance
 | 2026-03-05 | Human + Claude | Project initialised. CLAUDE.MD + PROJECTSTATUS.MD created. Git repo set up. Pushed to github.com/apon-prod/asteroidgame. |
 | 2026-03-05 | Human          | Decisions locked: WASD+mouse controls, twin-stick controller, placeholder art, infinite scrolling with parallax. |
 | 2026-03-05 | Human + Claude | Full architecture designed. CLAUDE.MD rewritten. GAME_DESIGN.MD created. PROJECTSTATUS.MD updated with 12-phase backlog. Run-based loop, dual upgrade trees, procedural asteroids, narrative arc finalised. |
+| 2026-03-05 | Human + Claude | Created AGENT_ASSIGNMENTS.MD. Split Phases 0–4 across 3 parallel agents (ARIA, Pilot, Navigator). Added multi-agent coordination section to CLAUDE.MD. |
