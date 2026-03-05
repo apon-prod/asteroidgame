@@ -4,6 +4,7 @@
 > One agent works on one task at a time. Claim a task by moving it to "In Progress"
 > and adding your identifier. Mark it "Done" when complete.
 > If you discover sub-tasks mid-work, add them to the relevant section.
+> Read `CLAUDE.MD` for architecture and `GAME_DESIGN.MD` for design/story.
 
 ---
 
@@ -17,77 +18,154 @@
 
 ## Backlog — Prioritised
 
-Tasks are roughly in implementation order. Re-order as dependencies become clear.
+Tasks are in implementation order. Dependencies are noted. Each phase should be fully testable before moving to the next.
 
 ### Phase 0 — Foundation
-- [ ] Set up Godot project folder structure (`scenes/`, `scripts/`, `assets/` subdirs)
-- [ ] Create `EventBus` autoload (`scripts/systems/event_bus.gd`)
-- [ ] Create `GameState` autoload (`scripts/systems/game_state.gd`)
-- [ ] Create `ResourceManager` autoload (`scripts/systems/resource_manager.gd`)
-- [ ] Register all autoloads in `project.godot`
-- [ ] Create a placeholder `Main` scene (`scenes/main/main.tscn`) as the entry point
+- [ ] Create `EventBus` autoload (`scripts/systems/event_bus.gd`) — all signals from CLAUDE.MD signal contracts
+- [ ] Create `GameState` autoload (`scripts/systems/game_state.gd`) — FSM with states: MAIN_MENU, MOTHERSHIP_DOCKED, RUN_ACTIVE, PLAYER_DIED, BANKED, FINAL_BOSS, EPILOGUE
+- [ ] Create `SaveManager` autoload (`scripts/systems/save_manager.gd`) — save/load to `user://savegame.json`
+- [ ] Create `ResourceManager` autoload (`scripts/systems/resource_manager.gd`) — carried + banked pools, resource type definitions
+- [ ] Create `UpgradeManager` autoload (`scripts/systems/upgrade_manager.gd`) — dual tree definitions, unlock checks, purchase logic
+- [ ] Create `RunManager` autoload (`scripts/systems/run_manager.gd`) — run start/end/death/bank lifecycle, threat calculation
+- [ ] Register all 6 autoloads in `project.godot`
+- [ ] Create placeholder `Main` scene (`scenes/main/main.tscn`) with basic node structure from CLAUDE.MD scene architecture
 - [ ] Set `Main` as the project's main scene in `project.godot`
+- [ ] Wire input map in `project.godot`: move_up, move_down, move_left, move_right, fire_mining, fire_weapon, interact/dock
 
 ### Phase 1 — Player Ship
-- [ ] Design player ship sprite (placeholder: coloured polygon or imported asset)
-- [ ] Create `PlayerShip` scene (`scenes/player/player_ship.tscn`)
-- [ ] Write `player_ship.gd` — movement (thrust + rotation), health, shield
-- [ ] Wire player input map in `project.godot` (move forward, rotate left/right, brake, fire)
-- [ ] Camera: attach `Camera2D` to player with smooth follow
-- [ ] Add player to `Main` scene and verify movement
+- [ ] Create player ship placeholder sprite (coloured polygon)
+- [ ] Create `PlayerShip` scene (`scenes/player/player_ship.tscn`) as CharacterBody2D
+- [ ] Write `player_ship.gd` — WASD thrust + mouse aim, physics-based with drag, drift
+- [ ] Create `HealthComponent` (`scripts/player/health_component.gd`) — HP + shield, damage, death signal
+- [ ] Create `EnergyComponent` (`scripts/player/energy_component.gd`) — energy pool, drain, regen
+- [ ] Create `CargoComponent` (`scripts/player/cargo_component.gd`) — carried resources, weight, speed penalty
+- [ ] Attach `Camera2D` with smooth follow (position smoothing enabled)
+- [ ] Add thruster particles (CPUParticles2D) that scale with thrust
+- [ ] Add PlayerShip to Main scene and verify: movement feels spacey, drifts, rotates to mouse
+- [ ] Verify cargo slowdown: add debug weight and confirm speed reduction
 
-### Phase 2 — Asteroids
-- [ ] Create sprites/placeholders for Large, Medium, Small asteroids
-- [ ] Create `AsteroidLarge` scene + script (HP, split on death, resource drop)
-- [ ] Create `AsteroidMedium` scene + script
-- [ ] Create `AsteroidSmall` scene + script
-- [ ] Create `ResourceDrop` scene (collectible that floats and is picked up on overlap)
-- [ ] Create `AsteroidField` spawner — randomly places asteroids in the world
-- [ ] Test full break chain: Large → 2× Medium → 2× Small → drops
+### Phase 2 — Mothership
+- [ ] Create `Mothership` scene (`scenes/world/mothership.tscn`) — StaticBody2D with placeholder sprite
+- [ ] Add dock zone (Area2D trigger) — detects when PlayerShip enters
+- [ ] On dock: emit `EventBus.player_docked`, transition GameState to MOTHERSHIP_DOCKED
+- [ ] On launch: emit `EventBus.player_launched`, transition to RUN_ACTIVE
+- [ ] Implement safe zone — enemies cannot spawn within mothership radius
+- [ ] Add visual indicators: emergency beacon at start, lights turn on per research tier (see GAME_DESIGN.MD)
+- [ ] Place Mothership at world origin (0,0) in Main scene
 
-### Phase 3 — Mining
-- [ ] Add mining laser to `PlayerShip` (beam/raycast that damages asteroids)
-- [ ] Wire mining input action
-- [ ] On resource drop overlap, call `ResourceManager.add(type, amount)`
-- [ ] Display resource counts in HUD
+### Phase 3 — Procedural Asteroids
+- [ ] Write `asteroid_generator.gd` (`scripts/asteroids/`) — procedural polygon generation
+  - Radial vertex variation algorithm
+  - Size bands: Small/Medium/Large with continuous variation
+  - Resource composition determines colour tint
+- [ ] Create `Asteroid` scene (`scenes/asteroids/asteroid.tscn`) — RigidBody2D with Polygon2D + CollisionPolygon2D
+- [ ] Asteroid script: HP, take_damage(), split-on-death (Large→Medium→Small→drops)
+- [ ] Uranium asteroids: shatter directly into drops (no split) — rare, high-value
+- [ ] Create `AsteroidField` spawner (`scripts/asteroids/asteroid_field.gd`) — spawns asteroids around player as they travel, despawns distant ones
+- [ ] Test: asteroids look varied, break chain works, resource type/colour visible
 
-### Phase 4 — HUD & UI
-- [ ] Create `HUD` scene (`scenes/ui/hud.tscn`) — health bar, shield bar, resource counters
-- [ ] Add HUD to `Main` as a CanvasLayer
-- [ ] Connect HUD to `ResourceManager` and player health signals via `EventBus`
+### Phase 4 — Mining Beam + Resource Drops + Cargo
+- [ ] Create `MiningBeam` node (Line2D + RayCast2D) attached to PlayerShip
+- [ ] Wire LMB input to activate beam toward mouse cursor
+- [ ] Beam deals continuous DPS to asteroid under raycast hit
+- [ ] Beam drains EnergyComponent while active; stops when energy = 0
+- [ ] Energy recharges when beam is not firing
+- [ ] Create `ResourceDrop` scene (`scenes/asteroids/resource_drop.tscn`) — Area2D with sprite, floats/drifts
+- [ ] ResourceDrop: on player overlap, add to CargoComponent and emit `EventBus.resource_collected`
+- [ ] CargoComponent: track weight, emit `EventBus.cargo_changed`, apply speed penalty to PlayerShip
+- [ ] Test: mine an asteroid → drops appear → collect drops → cargo weight increases → speed decreases
 
-### Phase 5 — Enemies
-- [ ] Create `EnemyScout` scene + script (patrol → chase → attack AI)
-- [ ] Create `EnemyFighter` scene + script (strafe + shoot AI)
-- [ ] Create projectile scene (`scenes/enemies/projectile.tscn`)
-- [ ] Implement player-enemy collision damage
-- [ ] Create `WaveManager` autoload — timed wave spawning
+### Phase 5 — HUD
+- [ ] Create `HUD` scene (`scenes/ui/hud/hud.tscn`) as CanvasLayer
+- [ ] Health bar (connects to `EventBus.player_health_changed`)
+- [ ] Shield bar (connects to `EventBus.player_shield_changed`)
+- [ ] Energy bar (connects to `EventBus.player_energy_changed`)
+- [ ] Cargo meter: weight / capacity bar (connects to `EventBus.cargo_changed`)
+- [ ] Resource counters: show carried quantities per type
+- [ ] Threat indicator: colour/icon showing current threat level
+- [ ] Mothership direction indicator: arrow pointing toward (0,0) when off-screen
+- [ ] Add HUD to Main scene
+- [ ] Test: all bars update in real-time during gameplay
 
-### Phase 6 — Shop & Upgrades
-- [ ] Design upgrade data structure (resource + dict or `Resource` class)
-- [ ] Create `SpaceStation` scene in the world (safe zone, triggers shop UI)
-- [ ] Create `Shop` UI scene with upgrade buttons
-- [ ] Connect shop purchases to `ResourceManager` and player stats
+### Phase 6 — Enemies + Threat System
+- [ ] Create base `Enemy` scene/script (`scripts/enemies/enemy_base.gd`) — HP, speed, damage, death
+- [ ] Create `EnemyScout` scene — fast, rams player (see GAME_DESIGN.MD stats)
+- [ ] Create `EnemyFighter` scene — strafes, shoots projectiles
+- [ ] Create enemy `Projectile` scene (`scenes/enemies/projectile.tscn`)
+- [ ] Create `EnemyHauler` scene — targets resource drops, steals them
+- [ ] Create `WaveManager` node (`scripts/world/wave_manager.gd`) — scene-local in EnemyContainer
+- [ ] Implement threat level calculation: `f(distance, cargo_weight)`
+- [ ] WaveManager spawns enemies based on threat thresholds (see GAME_DESIGN.MD table)
+- [ ] Enemies spawn at viewport edge + buffer, despawn when far from player
+- [ ] Player-enemy collision damage
+- [ ] Test: fly far from mothership with cargo → enemies escalate correctly
 
-### Phase 7 — Polish & Game Loop
-- [ ] Game over screen (player death)
-- [ ] Win condition or endless scoring
-- [ ] Main menu scene
-- [ ] Sound effects (mining, explosion, shooting)
-- [ ] Background parallax starfield
-- [ ] Screenshake on damage
-- [ ] Balance pass on all numbers
+### Phase 7 — Mothership UI + Upgrades + Save/Load
+- [ ] Create `MothershipUI` scene (`scenes/ui/shop/mothership_ui.tscn`) as CanvasLayer overlay
+- [ ] Research panel: shows mothership systems, current tiers, costs, purchase buttons
+- [ ] Ship upgrade panel: shows available upgrades, locked/unlocked state, costs, purchase buttons
+- [ ] Grey out locked upgrades (missing research prerequisite)
+- [ ] On purchase: deduct from banked resources via ResourceManager, update UpgradeManager
+- [ ] Apply ship upgrade effects to PlayerShip components (HP, speed, cargo, energy, etc.)
+- [ ] Implement SaveManager: save after bank + after purchase, load on game start
+- [ ] Banking: on dock, transfer CargoComponent contents to ResourceManager.banked, save
+- [ ] Death: clear CargoComponent, transition to MOTHERSHIP_DOCKED (no bank)
+- [ ] Story panel: show ARIA dialogue when milestones are reached
+- [ ] Launch button: start new run
+- [ ] Test: full loop — launch → mine → return → bank → buy upgrade → stats change → save → reload → state persists
 
-### Phase 8 — Build & Release
+### Phase 8 — Combat Weapons
+- [ ] Create base `Projectile` class (`scripts/player/projectile_base.gd`)
+- [ ] Create `BasicBolt` scene — single projectile toward cursor
+- [ ] Wire RMB input to fire combat weapon
+- [ ] Create `Missile` scene (T2 unlock) — homing, slower, area damage
+- [ ] Create `ShotgunBlast` scene (T3 unlock) — spread of projectiles, short range
+- [ ] WeaponMount on PlayerShip selects active weapon based on Combat Weapon upgrade tier
+- [ ] Player projectiles damage enemies
+- [ ] Test: all weapon types work, upgrades switch between them
+
+### Phase 9 — Story System
+- [ ] Create dialogue data structure (Dictionary or Resource)
+- [ ] ARIA dialogue for each milestone (see GAME_DESIGN.MD narrative milestones)
+- [ ] Trigger dialogue via `EventBus.story_milestone_reached` when research thresholds met
+- [ ] Display dialogue in StoryPanel (text box overlay)
+- [ ] Track seen dialogue in save data to avoid replaying
+- [ ] Test: reach research milestones → correct dialogue appears → only once
+
+### Phase 10 — Visual Polish + Audio
+- [ ] Parallax background: 3 layers (far stars, mid stars, near nebula) that scroll with camera
+- [ ] Screen shake on player damage (Camera2D offset + tween)
+- [ ] Explosion particles on asteroid/enemy death
+- [ ] Mining beam visual: glow, particles at hit point
+- [ ] Mothership visual progression (lights, damage decals per research tier)
+- [ ] Placeholder SFX: mining hum, explosion, projectile fire, pickup collect, dock
+- [ ] Ambient music: calm near mothership, escalating with threat
+- [ ] Ship sprite tilt tween during movement
+
+### Phase 11 — Final Boss
+- [ ] Create `EnemyArk` boss scene — large ship with multi-phase AI
+- [ ] Phase 1: spawns scout/fighter waves
+- [ ] Phase 2: direct beam weapon attacks
+- [ ] Phase 3: ramming approach + all remaining drones
+- [ ] Trigger when "The Signal" milestone reached and player launches a run
+- [ ] Boss HP bar on HUD
+- [ ] On defeat: trigger "Last Stand" → "New Dawn" epilogue
+- [ ] Epilogue scene / credits screen
+
+### Phase 12 — Build, Balance & Release
+- [ ] Balance pass: resource scarcity, enemy difficulty, upgrade costs, cargo limits
+- [ ] Main menu scene (New Game, Continue, Quit)
+- [ ] Pause menu (Resume, Settings, Quit to Menu)
+- [ ] Game over / death screen with stats
 - [ ] Configure Godot export presets (Windows, Linux)
-- [ ] Export and playtest build
-- [ ] Update README with play instructions
+- [ ] Export and playtest builds
+- [ ] Update README with play instructions and screenshots
 
 ---
 
 ## In Progress
 
-*(Nothing in progress — project just initialised.)*
+*(Nothing in progress — architecture planning complete, implementation not yet started.)*
 
 ---
 
@@ -96,9 +174,14 @@ Tasks are roughly in implementation order. Re-order as dependencies become clear
 | Date       | Task                                              | Agent / Human |
 |------------|---------------------------------------------------|---------------|
 | 2026-03-05 | Initialise Godot 4.5 project                      | Human         |
-| 2026-03-05 | Create CLAUDE.MD                                  | Claude        |
-| 2026-03-05 | Create PROJECTSTATUS.MD                           | Claude        |
-| 2026-03-05 | Initialise git repository + first commit          | Claude        |
+| 2026-03-05 | Create CLAUDE.MD (v1)                              | Claude        |
+| 2026-03-05 | Create PROJECTSTATUS.MD (v1)                       | Claude        |
+| 2026-03-05 | Initialise git repository + first commit           | Claude        |
+| 2026-03-05 | Scaffold project folder structure                  | Claude        |
+| 2026-03-05 | Install `/godot` skill                             | Claude        |
+| 2026-03-05 | Full architecture design + CLAUDE.MD rewrite       | Human + Claude|
+| 2026-03-05 | Create GAME_DESIGN.MD (story, lore, design tables) | Claude        |
+| 2026-03-05 | Update PROJECTSTATUS.MD with 12-phase backlog      | Claude        |
 
 ---
 
@@ -106,15 +189,27 @@ Tasks are roughly in implementation order. Re-order as dependencies become clear
 
 | # | Issue                                        | Raised by | Status  |
 |---|----------------------------------------------|-----------|---------|
-| 1 | Player movement style: tank controls vs mouse-aim? | Human | **Resolved** — WASD moves, mouse aims. Controller: twin-stick (left = move, right = aim). |
-| 2 | Art direction: programmer art placeholders or asset pack? | Human | **Resolved** — Placeholder art for now; real assets added as available. |
-| 3 | World structure: infinite scrolling, large fixed map, or room-based? | Human | **Resolved** — Infinite scrolling with parallax background layers. |
+| 1 | Player movement style | Human | **Resolved** — WASD thrust + mouse aim. Twin-stick controller. |
+| 2 | Art direction | Human | **Resolved** — Placeholder art for now. |
+| 3 | World structure | Human | **Resolved** — Infinite scrolling with parallax. |
+| 4 | Death penalty | Human | **Resolved** — Lose all un-banked resources. |
+| 5 | Mothership representation | Human | **Resolved** — Physical in-world + menu overlay when docked. |
+| 6 | Enemy escalation driver | Human | **Resolved** — Distance from mothership + cargo weight. |
+| 7 | Mining weapon type | Human | **Resolved** — Continuous laser beam with energy drain. |
+| 8 | Combat weapon type | Human | **Resolved** — Multiple types (bolt → missile → shotgun), unlocked via upgrades. |
+| 9 | Win condition | Human | **Resolved** — Defeat enemy Ark boss → epilogue. Story-driven, not endless. |
+| 10| Save system | Human | **Resolved** — Persistent save. Upgrades + banked resources saved across sessions. |
+| 11| Procedural asteroids | Human | **Resolved** — Phase 1: procedural polygons. Phase 2 (future): cell-grid destructible. |
+| 12| Mothership visual progression | Human | **Resolved** — Lights and glow improve per research tier. Same base sprite. |
 
 ---
 
 ## Architecture Notes for Agents
 
-- All cross-scene communication goes through `EventBus` signals — do not hold direct references to nodes in other scenes.
-- `ResourceManager`, `GameState`, and `WaveManager` are autoloads — access them by name anywhere.
-- Scenes must work standalone (i.e., runnable in the editor) before being added to `Main`.
-- Read `CLAUDE.MD` for full conventions, node naming rules, and system descriptions.
+- **Autoloads** (6): `EventBus`, `GameState`, `SaveManager`, `ResourceManager`, `UpgradeManager`, `RunManager`. Access by name anywhere.
+- **WaveManager** is scene-local (inside `World/EnemyContainer`), NOT an autoload.
+- All cross-scene communication goes through `EventBus` signals. See `CLAUDE.MD` for full signal contracts.
+- Scenes must work standalone (runnable in the editor) before wiring into `Main`.
+- Use `/godot` skill when creating `.tscn` or `.tres` files.
+- Read `CLAUDE.MD` for conventions, scene tree, and system details.
+- Read `GAME_DESIGN.MD` for stats, costs, story, and design rationale.
